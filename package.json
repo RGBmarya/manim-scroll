@@ -8,7 +8,7 @@
     "packages/manim-scroll"
   ],
   "scripts": {
-    "build": "npm run -w runtime build && npm run -w react build && npm run -w next build && npm run -w @rgbmarya/manim-scroll build",
+    "build": "pnpm --filter @mihirsarya/manim-scroll-runtime build && pnpm --filter @mihirsarya/manim-scroll-react build && pnpm --filter @mihirsarya/manim-scroll-next build && pnpm --filter @mihirsarya/manim-scroll build",
     "test": "vitest run",
     "test:watch": "vitest"
   },

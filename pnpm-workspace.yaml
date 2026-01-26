@@ -1,0 +1,5 @@
+packages:
+  - runtime
+  - react
+  - next
+  - packages/manim-scroll

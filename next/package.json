@@ -1,5 +1,5 @@
 {
-  "name": "@rgbmarya/manim-scroll-next",
+  "name": "@mihirsarya/manim-scroll-next",
   "version": "0.1.0",
   "description": "Next.js plugin for build-time Manim scroll animation rendering.",
   "main": "dist/index.js",

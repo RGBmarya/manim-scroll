@@ -9,18 +9,18 @@ Animations are automatically rendered at build time with smart caching.
 
 ```bash
 # Unified package (recommended)
-npm install @rgbmarya/manim-scroll
+npm install @mihirsarya/manim-scroll
 
 # Or install individual packages
-npm install @rgbmarya/manim-scroll-react @rgbmarya/manim-scroll-next
+npm install @mihirsarya/manim-scroll-react @mihirsarya/manim-scroll-next
 ```
 
 ### 2. Configure Next.js
 
 ```js
 // next.config.js
-const { withManimScroll } = require("@rgbmarya/manim-scroll/next");
-// Or: const { withManimScroll } = require("@rgbmarya/manim-scroll-next");
+const { withManimScroll } = require("@mihirsarya/manim-scroll/next");
+// Or: const { withManimScroll } = require("@mihirsarya/manim-scroll-next");
 
 module.exports = withManimScroll({
   // Optional configuration
@@ -37,8 +37,8 @@ module.exports = withManimScroll({
 
 ```tsx
 // app/page.tsx
-import { ManimScroll } from "@rgbmarya/manim-scroll";
-// Or: import { ManimScroll } from "@rgbmarya/manim-scroll-react";
+import { ManimScroll } from "@mihirsarya/manim-scroll";
+// Or: import { ManimScroll } from "@mihirsarya/manim-scroll-react";
 
 export default function Home() {
   return (
@@ -139,7 +139,7 @@ instead of the component.
 
 ```tsx
 import { useRef } from "react";
-import { useManimScroll } from "@rgbmarya/manim-scroll";
+import { useManimScroll } from "@mihirsarya/manim-scroll";
 
 function CustomAnimation() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -264,7 +264,7 @@ python render/cli.py \
 ## Use in the browser (Vanilla JS)
 
 ```ts
-import { registerScrollAnimation } from "@rgbmarya/manim-scroll-runtime";
+import { registerScrollAnimation } from "@mihirsarya/manim-scroll-runtime";
 
 const container = document.querySelector("#hero") as HTMLElement;
 
@@ -308,7 +308,7 @@ registerScrollAnimation({
 If you're not using the Next.js plugin, you can provide an explicit `manifestUrl`:
 
 ```tsx
-import { ManimScroll } from "@rgbmarya/manim-scroll-react";
+import { ManimScroll } from "@mihirsarya/manim-scroll-react";
 
 export function Hero() {
   return (

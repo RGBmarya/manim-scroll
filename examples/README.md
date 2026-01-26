@@ -25,5 +25,5 @@ python render/cli.py \
 
 ## Note
 
-For React/Next.js projects, use the `@rgbmarya/manim-scroll-next` plugin instead.
+For React/Next.js projects, use the `@mihirsarya/manim-scroll-next` plugin instead.
 See [docs/USAGE.md](../docs/USAGE.md) for details.

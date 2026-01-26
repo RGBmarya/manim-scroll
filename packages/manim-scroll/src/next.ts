@@ -6,7 +6,7 @@
  * @example
  * ```js
  * // next.config.js
- * const { withManimScroll } = require("@rgbmarya/manim-scroll/next");
+ * const { withManimScroll } = require("@mihirsarya/manim-scroll/next");
  *
  * module.exports = withManimScroll({
  *   manimScroll: { quality: "h" },
@@ -26,7 +26,7 @@ export {
   readCacheManifest,
   cleanOrphanedCache,
   renderAnimations,
-} from "@rgbmarya/manim-scroll-next";
+} from "@mihirsarya/manim-scroll-next";
 
 export type {
   ManimScrollConfig,
@@ -34,4 +34,4 @@ export type {
   ExtractedAnimation,
   RenderResult,
   RenderOptions,
-} from "@rgbmarya/manim-scroll-next";
+} from "@mihirsarya/manim-scroll-next";

@@ -15,14 +15,14 @@ Scroll-driven Manim animations for the web. Pre-render mathematical animations w
 ### Installation
 
 ```bash
-npm install @rgbmarya/manim-scroll
+npm install @mihirsarya/manim-scroll
 ```
 
 ### Next.js Setup
 
 ```js
 // next.config.js
-const { withManimScroll } = require("@rgbmarya/manim-scroll/next");
+const { withManimScroll } = require("@mihirsarya/manim-scroll/next");
 
 module.exports = withManimScroll({
   manimScroll: {
@@ -35,7 +35,7 @@ module.exports = withManimScroll({
 ### Usage
 
 ```tsx
-import { ManimScroll } from "@rgbmarya/manim-scroll";
+import { ManimScroll } from "@mihirsarya/manim-scroll";
 
 export default function Page() {
   return (
@@ -55,10 +55,10 @@ export default function Page() {
 
 | Package | npm | Description |
 |---------|-----|-------------|
-| `packages/manim-scroll` | `@rgbmarya/manim-scroll` | Unified package (recommended) |
-| `react/` | `@rgbmarya/manim-scroll-react` | React component and hooks |
-| `next/` | `@rgbmarya/manim-scroll-next` | Next.js build plugin |
-| `runtime/` | `@rgbmarya/manim-scroll-runtime` | Core scroll runtime |
+| `packages/manim-scroll` | `@mihirsarya/manim-scroll` | Unified package (recommended) |
+| `react/` | `@mihirsarya/manim-scroll-react` | React component and hooks |
+| `next/` | `@mihirsarya/manim-scroll-next` | Next.js build plugin |
+| `runtime/` | `@mihirsarya/manim-scroll-runtime` | Core scroll runtime |
 | `render/` | - | Python CLI for Manim rendering |
 
 ## Documentation
@@ -119,7 +119,7 @@ Skills follow the [Agent Skills open standard](https://skills.sh) and work acros
 ### When the Skill Activates
 
 The manim-scroll skill automatically loads when you:
-- Import from `@rgbmarya/manim-scroll`
+- Import from `@mihirsarya/manim-scroll`
 - Work with `<ManimScroll>` components
 - Configure `next.config.js` with `withManimScroll`
 - Ask about scroll-driven animations or Manim rendering

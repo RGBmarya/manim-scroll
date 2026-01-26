@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { registerScrollAnimation } from "@rgbmarya/manim-scroll-runtime";
-import type { ScrollRangeValue } from "@rgbmarya/manim-scroll-runtime";
+import { registerScrollAnimation } from "@mihirsarya/manim-scroll-runtime";
+import type { ScrollRangeValue } from "@mihirsarya/manim-scroll-runtime";
 import { computePropsHash } from "./hash";
 
 // Cache manifest type
@@ -170,7 +170,7 @@ export function useManimScroll(
         setError(
           new Error(
             `No pre-rendered animation found for scene "${scene}". ` +
-              `Make sure to run the build with @rgbmarya/manim-scroll-next.`
+              `Make sure to run the build with @mihirsarya/manim-scroll-next.`
           )
         );
       }

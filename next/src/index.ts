@@ -134,7 +134,7 @@ async function processManimScroll(
  * @example
  * ```js
  * // next.config.js
- * const { withManimScroll } = require("@rgbmarya/manim-scroll-next");
+ * const { withManimScroll } = require("@mihirsarya/manim-scroll-next");
  *
  * module.exports = withManimScroll({
  *   manimScroll: {

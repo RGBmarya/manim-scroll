@@ -26,7 +26,7 @@ describe("extractAnimationsFromFile", () => {
   it("should extract basic ManimScroll component", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(`
-      import { ManimScroll } from "@rgbmarya/manim-scroll";
+      import { ManimScroll } from "@mihirsarya/manim-scroll";
 
       export default function Page() {
         return (
@@ -170,7 +170,7 @@ describe("extractAnimationsFromFile", () => {
   it("should handle ManimScroll as member expression", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(`
-      import * as Components from "@rgbmarya/manim-scroll";
+      import * as Components from "@mihirsarya/manim-scroll";
 
       <Components.ManimScroll fontSize={72}>Test</Components.ManimScroll>
     `);

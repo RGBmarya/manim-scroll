@@ -334,7 +334,7 @@ describe("cleanOrphanedCache", () => {
       { name: validHash, isDirectory: () => true },
       { name: orphanHash, isDirectory: () => true },
       { name: "cache-manifest.json", isDirectory: () => false },
-    ] as unknown as fs.Dirent[]);
+    ] as any);
     vi.mocked(fs.rmSync).mockReturnValue(undefined);
 
     cleanOrphanedCache(animations, "/public");
@@ -356,7 +356,7 @@ describe("cleanOrphanedCache", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readdirSync).mockReturnValue([
       { name: validHash, isDirectory: () => true },
-    ] as unknown as fs.Dirent[]);
+    ] as any);
     vi.mocked(fs.rmSync).mockReturnValue(undefined);
 
     cleanOrphanedCache(animations, "/public");

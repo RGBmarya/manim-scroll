@@ -54,7 +54,7 @@ function findCliPath(providedPath?: string): string {
     path.resolve(__dirname, "../../render/cli.py"),
     path.resolve(__dirname, "../../../render/cli.py"),
     path.resolve(process.cwd(), "render/cli.py"),
-    path.resolve(process.cwd(), "node_modules/@rgbmarya/manim-scroll-next/render/cli.py"),
+    path.resolve(process.cwd(), "node_modules/@mihirsarya/manim-scroll-next/render/cli.py"),
   ];
 
   for (const candidate of candidates) {
@@ -80,7 +80,7 @@ function findTemplatesDir(providedPath?: string): string {
     path.resolve(__dirname, "../../render/templates"),
     path.resolve(__dirname, "../../../render/templates"),
     path.resolve(process.cwd(), "render/templates"),
-    path.resolve(process.cwd(), "node_modules/@rgbmarya/manim-scroll-next/render/templates"),
+    path.resolve(process.cwd(), "node_modules/@mihirsarya/manim-scroll-next/render/templates"),
   ];
 
   for (const candidate of candidates) {

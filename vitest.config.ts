@@ -15,9 +15,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@rgbmarya/manim-scroll-runtime": path.resolve(__dirname, "runtime/src"),
-      "@rgbmarya/manim-scroll-react": path.resolve(__dirname, "react/src"),
-      "@rgbmarya/manim-scroll-next": path.resolve(__dirname, "next/src"),
+      "@mihirsarya/manim-scroll-runtime": path.resolve(__dirname, "runtime/src"),
+      "@mihirsarya/manim-scroll-react": path.resolve(__dirname, "react/src"),
+      "@mihirsarya/manim-scroll-next": path.resolve(__dirname, "next/src"),
     },
   },
 });

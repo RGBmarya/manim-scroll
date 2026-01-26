@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useEffect } from "react";
-import type { ScrollRangeValue } from "@rgbmarya/manim-scroll-runtime";
+import type { ScrollRangeValue } from "@mihirsarya/manim-scroll-runtime";
 import { useManimScroll } from "./hooks";
 import { extractChildrenText } from "./hash";
 

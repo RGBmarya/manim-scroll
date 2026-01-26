@@ -1,5 +1,5 @@
 {
-  "name": "@rgbmarya/manim-scroll",
+  "name": "@mihirsarya/manim-scroll",
   "version": "0.1.0",
   "description": "Unified package for scroll-driven Manim animations - includes runtime, React components, and Next.js plugin.",
   "main": "dist/index.js",
@@ -31,9 +31,9 @@
     }
   },
   "dependencies": {
-    "@rgbmarya/manim-scroll-runtime": "workspace:*",
-    "@rgbmarya/manim-scroll-react": "workspace:*",
-    "@rgbmarya/manim-scroll-next": "workspace:*"
+    "@mihirsarya/manim-scroll-runtime": "workspace:*",
+    "@mihirsarya/manim-scroll-react": "workspace:*",
+    "@mihirsarya/manim-scroll-next": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^18.2.61",

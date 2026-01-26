@@ -21,13 +21,13 @@ The recommended approach uses the Next.js plugin for automatic build-time render
 1. Install the unified package:
 
 ```bash
-npm install @rgbmarya/manim-scroll
+npm install @mihirsarya/manim-scroll
 ```
 
 2. Configure `next.config.js`:
 
 ```js
-const { withManimScroll } = require("@rgbmarya/manim-scroll/next");
+const { withManimScroll } = require("@mihirsarya/manim-scroll/next");
 
 module.exports = withManimScroll({
   manimScroll: {
@@ -42,7 +42,7 @@ module.exports = withManimScroll({
 3. Use the component with inline props:
 
 ```tsx
-import { ManimScroll } from "@rgbmarya/manim-scroll";
+import { ManimScroll } from "@mihirsarya/manim-scroll";
 
 export default function Page() {
   return (
@@ -63,10 +63,10 @@ The plugin automatically extracts props, renders animations, and caches them.
 
 ## Package structure
 
-- `packages/manim-scroll/` - Unified package (`@rgbmarya/manim-scroll`)
-- `next/` - Next.js build plugin (`@rgbmarya/manim-scroll-next`)
-- `react/` - React component and hook (`@rgbmarya/manim-scroll-react`)
-- `runtime/` - Core scroll runtime (`@rgbmarya/manim-scroll-runtime`)
+- `packages/manim-scroll/` - Unified package (`@mihirsarya/manim-scroll`)
+- `next/` - Next.js build plugin (`@mihirsarya/manim-scroll-next`)
+- `react/` - React component and hook (`@mihirsarya/manim-scroll-react`)
+- `runtime/` - Core scroll runtime (`@mihirsarya/manim-scroll-runtime`)
 - `render/` - Python CLI for Manim rendering
 
 ## Next.js plugin configuration
@@ -114,7 +114,7 @@ For advanced use cases requiring custom control:
 
 ```tsx
 import { useRef } from "react";
-import { useManimScroll } from "@rgbmarya/manim-scroll";
+import { useManimScroll } from "@mihirsarya/manim-scroll";
 
 function CustomAnimation() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -192,7 +192,7 @@ python render/cli.py \
 ## Vanilla JS usage
 
 ```ts
-import { registerScrollAnimation } from "@rgbmarya/manim-scroll-runtime";
+import { registerScrollAnimation } from "@mihirsarya/manim-scroll-runtime";
 
 const container = document.querySelector("#hero") as HTMLElement;
 

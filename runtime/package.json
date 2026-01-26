@@ -1,5 +1,5 @@
 {
-  "name": "@rgbmarya/manim-scroll-runtime",
+  "name": "@mihirsarya/manim-scroll-runtime",
   "version": "0.1.0",
   "description": "Scroll-driven playback runtime for pre-rendered Manim animations.",
   "main": "dist/index.js",
