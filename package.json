@@ -1,0 +1,13 @@
+{
+  "name": "manim-scroll",
+  "private": true,
+  "workspaces": [
+    "runtime",
+    "react",
+    "next",
+    "packages/manim-scroll"
+  ],
+  "scripts": {
+    "build": "npm run -w runtime build && npm run -w react build && npm run -w next build && npm run -w @rgbmarya/manim-scroll build"
+  }
+}

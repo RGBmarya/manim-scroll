@@ -1,0 +1,14 @@
+[project]
+name = "manim-scroll-render"
+version = "0.1.0"
+description = "Render pipeline for Manim scroll animations."
+requires-python = ">=3.10"
+dependencies = [
+  "manim>=0.18.0"
+]
+
+[project.scripts]
+manim-scroll-render = "cli:main"
+
+[tool.setuptools]
+py-modules = ["cli"]

@@ -1,0 +1,25 @@
+{
+  "name": "@rgbmarya/manim-scroll-react",
+  "version": "0.1.0",
+  "description": "React wrapper for scroll-driven Manim animations.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "dependencies": {
+    "@rgbmarya/manim-scroll-runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.61",
+    "@types/react-dom": "^18.2.19",
+    "typescript": "^5.4.5"
+  }
+}

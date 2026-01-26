@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manim Scroll Example</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+      .spacer {
+        height: 100vh;
+      }
+      #hero {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #111;
+      }
+      canvas {
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="spacer"></div>
+    <section id="hero"></section>
+    <div class="spacer"></div>
+
+    <script type="module">
+      import { registerScrollAnimation } from "../runtime/dist/index.js";
+
+      const container = document.querySelector("#hero");
+      registerScrollAnimation({
+        container,
+        manifestUrl: "/dist/scene/manifest.json",
+        mode: "auto",
+      });
+    </script>
+  </body>
+</html>
