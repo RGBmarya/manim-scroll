@@ -50,10 +50,16 @@ function findCliPath(providedPath?: string): string {
   }
 
   // Try to find the CLI relative to the package
+  // When installed, __dirname is next/dist/, render is at next/render/
   const candidates = [
+    // When running from dist/, render/ is a sibling directory
+    path.resolve(__dirname, "../render/cli.py"),
+    // Legacy paths for development
     path.resolve(__dirname, "../../render/cli.py"),
     path.resolve(__dirname, "../../../render/cli.py"),
+    // When running from project root
     path.resolve(process.cwd(), "render/cli.py"),
+    // When installed in node_modules
     path.resolve(process.cwd(), "node_modules/@mihirsarya/manim-scroll-next/render/cli.py"),
   ];
 
@@ -76,10 +82,16 @@ function findTemplatesDir(providedPath?: string): string {
     return providedPath;
   }
 
+  // When installed, __dirname is next/dist/, templates are at next/render/templates/
   const candidates = [
+    // When running from dist/, render/ is a sibling directory
+    path.resolve(__dirname, "../render/templates"),
+    // Legacy paths for development
     path.resolve(__dirname, "../../render/templates"),
     path.resolve(__dirname, "../../../render/templates"),
+    // When running from project root
     path.resolve(process.cwd(), "render/templates"),
+    // When installed in node_modules
     path.resolve(process.cwd(), "node_modules/@mihirsarya/manim-scroll-next/render/templates"),
   ];
 

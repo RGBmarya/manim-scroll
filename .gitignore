@@ -40,3 +40,6 @@ out/
 *.tmp
 *.temp
 .cache/
+
+# Copied render directory in next package (copied at build time)
+next/render/

@@ -1,14 +1,17 @@
 {
   "name": "@mihirsarya/manim-scroll-next",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Next.js plugin for build-time Manim scroll animation rendering.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "render"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "prebuild": "rm -rf render && cp -r ../render .",
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "rm -rf render && cp -r ../render . && npm run build"
   },
   "peerDependencies": {
     "next": ">=13.0.0"
