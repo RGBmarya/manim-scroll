@@ -256,6 +256,41 @@ describe("extractAnimationsFromFile", () => {
     expect(result).toHaveLength(1);
     expect(result[0].props.data).toEqual({ "123": "value" });
   });
+
+  it("should exclude display/scroll-related props from animation props", () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(`
+      <ManimScroll
+        fontSize={72}
+        color="#ffffff"
+        scrollRange="viewport"
+        style={{ width: "100%", height: "100%" }}
+        className="animation-container"
+        mode="frames"
+        onReady={() => {}}
+        onProgress={(p) => console.log(p)}
+        canvas={{ width: 1920, height: 1080 }}
+      >
+        Hello World
+      </ManimScroll>
+    `);
+
+    const result = extractAnimationsFromFile("/app/page.tsx");
+
+    expect(result).toHaveLength(1);
+    // Animation props should be included
+    expect(result[0].props.fontSize).toBe(72);
+    expect(result[0].props.color).toBe("#ffffff");
+    expect(result[0].props.text).toBe("Hello World");
+    // Display/scroll props should be excluded
+    expect(result[0].props.scrollRange).toBeUndefined();
+    expect(result[0].props.style).toBeUndefined();
+    expect(result[0].props.className).toBeUndefined();
+    expect(result[0].props.mode).toBeUndefined();
+    expect(result[0].props.onReady).toBeUndefined();
+    expect(result[0].props.onProgress).toBeUndefined();
+    expect(result[0].props.canvas).toBeUndefined();
+  });
 });
 
 describe("extractChildrenText (via extractor)", () => {

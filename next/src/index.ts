@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as path from "path";
 import type { NextConfig } from "next";
 import { extractAnimations } from "./extractor";
@@ -6,8 +7,30 @@ import {
   writeCacheManifest,
   cleanOrphanedCache,
   computePropsHash,
+  ensureAssetDir,
+  readCacheManifest,
 } from "./cache";
 import { renderAnimations, RenderOptions } from "./renderer";
+
+/**
+ * Ensure a cache manifest file exists (preserving existing entries).
+ * This is called synchronously so the file exists before the page loads.
+ */
+function ensureCacheManifestExists(publicDir: string): void {
+  const manifestPath = path.join(publicDir, "manim-assets", "cache-manifest.json");
+
+  // If manifest already exists, leave it alone
+  if (fs.existsSync(manifestPath)) {
+    return;
+  }
+
+  // Create the directory and an empty manifest
+  ensureAssetDir(publicDir);
+  fs.writeFileSync(
+    manifestPath,
+    JSON.stringify({ version: 1, animations: {} }, null, 2)
+  );
+}
 
 export interface ManimScrollConfig {
   /** Path to the Python executable (default: "python3") */
@@ -83,6 +106,12 @@ async function processManimScroll(
     }
   }
 
+  // Write the cache manifest IMMEDIATELY after extraction, before rendering.
+  // This ensures the manifest is available when the page loads, even if
+  // rendering is still in progress. The runtime will gracefully handle
+  // missing animation files.
+  writeCacheManifest(animations, publicDir);
+
   // Determine which need rendering
   const { cached, toRender } = getAnimationsToRender(animations, publicDir);
 
@@ -117,9 +146,6 @@ async function processManimScroll(
     console.log("[manim-scroll] All animations are cached, skipping render.");
   }
 
-  // Write the cache manifest for runtime lookup
-  writeCacheManifest(animations, publicDir);
-
   // Clean up orphaned cache entries
   if (config.cleanOrphans !== false) {
     cleanOrphanedCache(animations, publicDir);
@@ -131,9 +157,11 @@ async function processManimScroll(
 /**
  * Wrap a Next.js config with ManimScroll build-time processing.
  *
+ * Supports two calling patterns:
+ *
  * @example
  * ```js
- * // next.config.js
+ * // Pattern 1: Combined config (recommended)
  * const { withManimScroll } = require("@mihirsarya/manim-scroll-next");
  *
  * module.exports = withManimScroll({
@@ -143,11 +171,24 @@ async function processManimScroll(
  *   },
  * });
  * ```
+ *
+ * @example
+ * ```js
+ * // Pattern 2: Separate configs
+ * module.exports = withManimScroll(nextConfig, {
+ *   pythonPath: "python3",
+ *   quality: "h",
+ * });
+ * ```
  */
 export function withManimScroll(
-  nextConfig: NextConfigWithManimScroll = {}
+  nextConfig: NextConfigWithManimScroll = {},
+  manimScrollConfig?: ManimScrollConfig
 ): NextConfig {
-  const manimConfig = nextConfig.manimScroll ?? {};
+  // Support both calling patterns:
+  // 1. withManimScroll({ manimScroll: {...} })
+  // 2. withManimScroll(nextConfig, { pythonPath: ... })
+  const manimConfig = manimScrollConfig ?? nextConfig.manimScroll ?? {};
 
   // Remove manimScroll from the config passed to Next.js
   const { manimScroll: _, ...restConfig } = nextConfig;
@@ -180,7 +221,15 @@ export function withManimScroll(
 
       // Run in dev mode on first build
       if (context.dev && context.isServer) {
-        processManimScroll(context.dir, manimConfig).catch((error) => {
+        const projectDir = context.dir;
+        const publicDir = path.join(projectDir, "public");
+
+        // Ensure a cache manifest exists SYNCHRONOUSLY before the page loads.
+        // This prevents 404 errors while async processing is running.
+        // The manifest will be updated with actual animations once extraction completes.
+        ensureCacheManifestExists(publicDir);
+
+        processManimScroll(projectDir, manimConfig).catch((error) => {
           console.error("[manim-scroll] Error during dev processing:", error);
         });
       }

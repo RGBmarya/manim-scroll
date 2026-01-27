@@ -61,6 +61,121 @@ export default function Page() {
 
 The plugin automatically extracts props, renders animations, and caches them.
 
+## Native mode (no pre-rendered assets)
+
+For text animations without pre-rendered video/frames, use native mode. This renders text directly in the browser using SVG, replicating Manim's Write/DrawBorderThenFill animation.
+
+```tsx
+<ManimScroll
+  mode="native"
+  fontSize={48}
+  color="#ffffff"
+  scrollRange="viewport"
+  style={{ height: "100vh", background: "#111" }}
+>
+  Currently building
+</ManimScroll>
+```
+
+Native mode benefits:
+- **No build step required** - works immediately without Python/Manim
+- **Perfect sizing** - text renders at exact pixel size (no scaling artifacts)
+- **Smaller bundle** - no video/frame assets to download
+- **Authentic Manim animation** - replicates Write/DrawBorderThenFill exactly:
+  - Uses Manim's exact `lag_ratio = min(4.0 / length, 0.2)` formula
+  - Two-phase animation via `integer_interpolate(0, 2, alpha)`
+  - Phase 0: Draw stroke progressively (0-50%)
+  - Phase 1: Interpolate from outline to filled (50-100%)
+  - Stroke width defaults to 2 (matching Manim's DrawBorderThenFill)
+  - Uses `linear` rate function for Write animation
+  - **Progressive outlines**: Each character is split into individual contours (sub-paths), and the lag_ratio is applied to ALL contours across all characters, so outlines appear progressively rather than all at once (matching Manim's behavior)
+- **Scroll-driven** - same scroll progress behavior as pre-rendered mode
+
+### useNativeAnimation hook
+
+For programmatic control:
+
+```tsx
+import { useRef } from "react";
+import { useNativeAnimation } from "@mihirsarya/manim-scroll";
+
+function NativeDemo() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const { progress, isReady } = useNativeAnimation({
+    ref: containerRef,
+    text: "Hello World",
+    fontSize: 72,
+    color: "#ffffff",
+    scrollRange: "viewport",
+  });
+
+  return (
+    <div ref={containerRef} style={{ height: "100vh" }}>
+      {!isReady && <div>Loading...</div>}
+    </div>
+  );
+}
+```
+
+### Vanilla JS usage
+
+```ts
+import { registerNativeAnimation } from "@mihirsarya/manim-scroll-runtime";
+
+const container = document.querySelector("#hero") as HTMLElement;
+
+registerNativeAnimation({
+  container,
+  text: "Animate this",
+  fontSize: 72,
+  color: "#ffffff",
+  scrollRange: "viewport",
+  onReady: () => console.log("ready"),
+});
+```
+
+### Custom fonts
+
+For authentic Manim typography, provide a font URL (woff, woff2, ttf, otf):
+
+```tsx
+<ManimScroll
+  mode="native"
+  fontSize={48}
+  color="#ffffff"
+  fontUrl="/fonts/CMUSerif-Roman.woff2"
+>
+  Mathematical text
+</ManimScroll>
+```
+
+## Inline mode
+
+For animations that flow with surrounding text (like within a paragraph), use inline mode:
+
+```tsx
+<p>
+  I'm building{" "}
+  <ManimScroll
+    scene="TextScene"
+    fontSize={24}
+    color="#667eea"
+    inline
+    style={{ width: "150px", height: "30px" }}
+  >
+    the future
+  </ManimScroll>{" "}
+  today.
+</p>
+```
+
+Inline mode:
+- Renders with a **transparent background**
+- Uses `display: inline-block` for flow with text
+- Adjusts the Manim camera to fit text tightly with minimal padding
+- Outputs WebM with alpha channel (for video mode) or transparent PNGs (for frames mode)
+
 ## Package structure
 
 - `packages/manim-scroll/` - Unified package (`@mihirsarya/manim-scroll`)
@@ -213,8 +328,12 @@ registerScrollAnimation({
 | `fontSize` | `number` | Font size for text animations |
 | `color` | `string` | Color as hex string (e.g., `"#ffffff"`) |
 | `font` | `string` | Font family for text |
+| `inline` | `boolean` | Enable inline mode with transparent background and tight bounds |
+| `padding` | `number` | Padding around text in inline mode (Manim units, default: `0.2`) |
 | `manifestUrl` | `string` | Explicit manifest URL (overrides auto-resolution) |
-| `mode` | `"auto" \| "video" \| "frames"` | Playback mode |
+| `mode` | `"auto" \| "video" \| "frames" \| "native"` | Playback mode (`native` for SVG animation) |
+| `fontUrl` | `string` | URL to font file for native mode (woff, woff2, ttf, otf) |
+| `strokeWidth` | `number` | Stroke width for native mode drawing phase (default: `2`, matches Manim) |
 | `scrollRange` | `ScrollRangeValue` | Scroll range: preset, tuple, or object |
 | `onReady` | `() => void` | Called when animation is loaded |
 | `onProgress` | `(progress: number) => void` | Called on scroll progress |

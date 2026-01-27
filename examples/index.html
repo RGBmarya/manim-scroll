@@ -8,16 +8,41 @@
       body {
         margin: 0;
         font-family: Arial, sans-serif;
+        background: #0a0a0a;
+        color: #fff;
       }
       .spacer {
         height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #666;
       }
-      #hero {
+      .section {
         height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
         background: #111;
+      }
+      .section-title {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        font-size: 0.875rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      #native-demo {
+        position: relative;
+      }
+      #native-container {
+        font-size: 72px;
+      }
+      #pre-rendered {
+        position: relative;
       }
       canvas {
         max-width: 100%;
@@ -26,18 +51,54 @@
     </style>
   </head>
   <body>
-    <div class="spacer"></div>
-    <section id="hero"></section>
-    <div class="spacer"></div>
+    <div class="spacer">Scroll down to see animations</div>
+    
+    <!-- Native Animation Demo -->
+    <section id="native-demo" class="section">
+      <div class="section-title">Native Mode (SVG Animation)</div>
+      <div id="native-container"></div>
+    </section>
+    
+    <div class="spacer">Keep scrolling...</div>
+    
+    <!-- Pre-rendered Animation Demo (if available) -->
+    <section id="pre-rendered" class="section">
+      <div class="section-title">Pre-rendered Mode (Video/Frames)</div>
+      <div id="pre-rendered-container"></div>
+    </section>
+    
+    <div class="spacer">End of demo</div>
 
     <script type="module">
-      import { registerScrollAnimation } from "../runtime/dist/index.js";
+      import { registerScrollAnimation, registerNativeAnimation } from "../runtime/dist/index.js";
 
-      const container = document.querySelector("#hero");
+      // Native animation demo - no pre-rendered assets needed!
+      const nativeContainer = document.querySelector("#native-container");
+      registerNativeAnimation({
+        container: nativeContainer,
+        text: "Currently",
+        fontSize: 72,
+        color: "#ffffff",
+        strokeWidth: 1.5,
+        scrollRange: "viewport",
+        onReady: () => console.log("Native animation ready!"),
+        onProgress: (p) => console.log("Native progress:", Math.round(p * 100) + "%"),
+      });
+
+      // Pre-rendered animation demo (will show error if manifest not found)
+      const preRenderedContainer = document.querySelector("#pre-rendered-container");
       registerScrollAnimation({
-        container,
+        container: preRenderedContainer,
         manifestUrl: "/dist/scene/manifest.json",
         mode: "auto",
+        scrollRange: "viewport",
+      }).catch((err) => {
+        preRenderedContainer.innerHTML = `
+          <div style="color: #666; text-align: center; font-size: 1rem;">
+            <p>Pre-rendered animation not available.</p>
+            <p style="font-size: 0.75rem;">Run the build to generate assets.</p>
+          </div>
+        `;
       });
     </script>
   </body>

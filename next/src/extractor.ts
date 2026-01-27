@@ -176,7 +176,25 @@ function isManimScrollComponent(node: t.JSXOpeningElement): boolean {
 }
 
 /**
+ * Props that should NOT be included in the animation hash.
+ * These are display/scroll-related props, not animation-specific props.
+ * This list must stay in sync with what ManimScroll.tsx excludes from animationProps.
+ */
+const EXCLUDED_PROPS = new Set([
+  "manifestUrl",
+  "mode",
+  "scrollRange",
+  "onReady",
+  "onProgress",
+  "canvas",
+  "className",
+  "style",
+  "children", // children is handled separately as "text"
+]);
+
+/**
  * Extract ManimScroll component data from a JSX element.
+ * Returns null if the component uses native mode (no pre-rendering needed).
  */
 function extractManimScroll(
   jsxElement: t.JSXElement,
@@ -190,6 +208,7 @@ function extractManimScroll(
 
   const props: Record<string, unknown> = {};
   let scene = "TextScene";
+  let mode: string | undefined;
 
   // Extract attributes
   for (const attr of openingElement.attributes) {
@@ -199,13 +218,20 @@ function extractManimScroll(
 
       if (name === "scene" && typeof value === "string") {
         scene = value;
-      } else if (name === "manifestUrl") {
-        // Skip manifestUrl - this is for explicit mode
+      } else if (name === "mode" && typeof value === "string") {
+        mode = value;
+      } else if (EXCLUDED_PROPS.has(name)) {
+        // Skip display/scroll-related props - only include animation-specific props
         continue;
       } else if (value !== undefined) {
         props[name] = value;
       }
     }
+  }
+
+  // Skip native mode components - they render in the browser without pre-rendering
+  if (mode === "native") {
+    return null;
   }
 
   // Extract children as text prop
