@@ -1,6 +1,6 @@
 {
   "name": "@mihirsarya/manim-scroll-react",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "React wrapper for scroll-driven Manim animations.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
