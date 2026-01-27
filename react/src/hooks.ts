@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { registerScrollAnimation } from "@mihirsarya/manim-scroll-runtime";
-import type { ScrollRangeValue } from "@mihirsarya/manim-scroll-runtime";
+import { registerScrollAnimation, registerNativeAnimation } from "@mihirsarya/manim-scroll-runtime";
+import type { ScrollRangeValue, NativeAnimationOptions } from "@mihirsarya/manim-scroll-runtime";
 import { computePropsHash } from "./hash";
 
 // Cache manifest type
@@ -9,43 +9,83 @@ interface CacheManifest {
   animations: Record<string, string>;
 }
 
-// Global cache manifest (loaded once)
-let cacheManifestPromise: Promise<CacheManifest | null> | null = null;
+// Global cache manifest state
+let cachedManifest: CacheManifest | null = null;
+let manifestFetchPromise: Promise<CacheManifest | null> | null = null;
+let lastFetchTime = 0;
+
+// In dev mode, allow manifest to be refreshed every 2 seconds
+const MANIFEST_CACHE_TTL = process.env.NODE_ENV === "development" ? 2000 : Infinity;
 
 /**
  * Load the cache manifest from the public directory.
+ * In dev mode, refreshes the manifest periodically to pick up newly rendered animations.
  */
-async function loadCacheManifest(): Promise<CacheManifest | null> {
-  if (cacheManifestPromise) {
-    return cacheManifestPromise;
+async function loadCacheManifest(forceRefresh = false): Promise<CacheManifest | null> {
+  const now = Date.now();
+  const isStale = now - lastFetchTime > MANIFEST_CACHE_TTL;
+
+  // Return cached manifest if fresh
+  if (cachedManifest && !isStale && !forceRefresh) {
+    return cachedManifest;
   }
 
-  cacheManifestPromise = fetch("/manim-assets/cache-manifest.json")
+  // If already fetching, wait for that
+  if (manifestFetchPromise && !forceRefresh) {
+    return manifestFetchPromise;
+  }
+
+  lastFetchTime = now;
+  manifestFetchPromise = fetch("/manim-assets/cache-manifest.json", {
+    cache: forceRefresh ? "no-store" : "default",
+  })
     .then((response) => {
       if (!response.ok) {
         return null;
       }
       return response.json() as Promise<CacheManifest>;
     })
-    .catch(() => null);
+    .then((manifest) => {
+      cachedManifest = manifest;
+      manifestFetchPromise = null;
+      return manifest;
+    })
+    .catch(() => {
+      manifestFetchPromise = null;
+      return null;
+    });
 
-  return cacheManifestPromise;
+  return manifestFetchPromise;
 }
 
 /**
  * Resolve the manifest URL for the given animation props.
+ * In dev mode, retries with manifest refresh if animation not found.
  */
 async function resolveManifestUrl(
   scene: string,
-  props: Record<string, unknown>
+  props: Record<string, unknown>,
+  retryCount = 0
 ): Promise<string | null> {
-  const manifest = await loadCacheManifest();
+  const manifest = await loadCacheManifest(retryCount > 0);
   if (!manifest) {
     return null;
   }
 
   const hash = computePropsHash(scene, props);
-  return manifest.animations[hash] ?? null;
+  const url = manifest.animations[hash];
+
+  if (url) {
+    return url;
+  }
+
+  // In dev mode, retry a few times as animations might still be rendering
+  if (process.env.NODE_ENV === "development" && retryCount < 5) {
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)));
+    return resolveManifestUrl(scene, props, retryCount + 1);
+  }
+
+  return null;
 }
 
 /**
@@ -69,6 +109,8 @@ export interface UseManimScrollOptions {
     width?: number;
     height?: number;
   };
+  /** Whether the hook is enabled (default: true) */
+  enabled?: boolean;
 }
 
 /**
@@ -128,6 +170,7 @@ export function useManimScroll(
     mode,
     scrollRange,
     canvasDimensions,
+    enabled = true,
   } = options;
 
   const [progress, setProgress] = useState(0);
@@ -156,6 +199,8 @@ export function useManimScroll(
 
   // Resolve manifest URL if not explicitly provided
   useEffect(() => {
+    if (!enabled) return;
+
     if (explicitManifestUrl) {
       setResolvedManifestUrl(explicitManifestUrl);
       setError(null);
@@ -175,7 +220,7 @@ export function useManimScroll(
         );
       }
     });
-  }, [explicitManifestUrl, scene, memoizedAnimationProps]);
+  }, [enabled, explicitManifestUrl, scene, memoizedAnimationProps]);
 
   // Handle progress updates (respects pause state)
   const handleProgress = useCallback((p: number) => {
@@ -191,6 +236,8 @@ export function useManimScroll(
 
   // Register scroll animation
   useEffect(() => {
+    if (!enabled) return;
+
     const container = ref.current;
     if (!container || !resolvedManifestUrl) return;
 
@@ -201,8 +248,19 @@ export function useManimScroll(
     if (canvasDimensions?.width) canvasEl.width = canvasDimensions.width;
     if (canvasDimensions?.height) canvasEl.height = canvasDimensions.height;
 
+    // Check if inline mode
+    const isInline = animationProps.inline === true;
+
     // Only append if we created the canvas
     if (!canvasRef.current) {
+      if (!isInline) {
+        // Block mode: fill container
+        canvasEl.style.width = "100%";
+        canvasEl.style.height = "100%";
+        canvasEl.style.objectFit = "contain";
+        canvasEl.style.display = "block";
+      }
+      // For inline mode, let the player set styles based on manifest data
       container.appendChild(canvasEl);
     }
 
@@ -232,6 +290,7 @@ export function useManimScroll(
       setIsReady(false);
     };
   }, [
+    enabled,
     ref,
     resolvedManifestUrl,
     mode,
@@ -272,3 +331,168 @@ export function useManimScroll(
 
 // Re-export helper functions for use by the component
 export { loadCacheManifest, resolveManifestUrl };
+
+/**
+ * Options for the useNativeAnimation hook.
+ */
+export interface UseNativeAnimationOptions {
+  /** Ref to the container element */
+  ref: React.RefObject<HTMLElement | null>;
+  /** The text to animate */
+  text: string;
+  /** Font size in pixels. If not specified, inherits from parent element. */
+  fontSize?: number;
+  /** Text color (hex or CSS color) */
+  color?: string;
+  /** URL to a font file (woff, woff2, ttf, otf) for opentype.js */
+  fontUrl?: string;
+  /** Stroke width for the drawing phase */
+  strokeWidth?: number;
+  /** Scroll range configuration */
+  scrollRange?: ScrollRangeValue;
+  /** Whether the hook is enabled (default: true) */
+  enabled?: boolean;
+}
+
+/**
+ * Result returned by the useNativeAnimation hook.
+ */
+export interface UseNativeAnimationResult {
+  /** Current scroll progress (0 to 1) */
+  progress: number;
+  /** Whether the animation is loaded and ready */
+  isReady: boolean;
+  /** Error if initialization failed */
+  error: Error | null;
+  /** Pause scroll-driven updates */
+  pause: () => void;
+  /** Resume scroll-driven updates */
+  resume: () => void;
+  /** Whether scroll updates are paused */
+  isPaused: boolean;
+}
+
+/**
+ * Hook for native text animation that renders directly in the browser
+ * using SVG, replicating Manim's Write/DrawBorderThenFill effect.
+ *
+ * This hook bypasses the manifest resolution and pre-rendered assets,
+ * instead animating text natively using opentype.js and SVG.
+ *
+ * @example
+ * ```tsx
+ * function NativeTextAnimation() {
+ *   const containerRef = useRef<HTMLDivElement>(null);
+ *   const { progress, isReady } = useNativeAnimation({
+ *     ref: containerRef,
+ *     text: "Hello World",
+ *     fontSize: 48,
+ *     color: "#ffffff",
+ *   });
+ *
+ *   return (
+ *     <div ref={containerRef} style={{ height: "100vh" }}>
+ *       {!isReady && <div>Loading...</div>}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useNativeAnimation(
+  options: UseNativeAnimationOptions
+): UseNativeAnimationResult {
+  const {
+    ref,
+    text,
+    fontSize, // undefined means inherit from parent
+    color = "#ffffff",
+    fontUrl,
+    strokeWidth = 2, // Manim's DrawBorderThenFill default
+    scrollRange,
+    enabled = true,
+  } = options;
+
+  const [progress, setProgress] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const pausedRef = useRef(isPaused);
+
+  // Keep pausedRef in sync
+  useEffect(() => {
+    pausedRef.current = isPaused;
+  }, [isPaused]);
+
+  // Handle progress updates (respects pause state)
+  const handleProgress = useCallback((p: number) => {
+    if (!pausedRef.current) {
+      setProgress(p);
+    }
+  }, []);
+
+  // Handle ready callback
+  const handleReady = useCallback(() => {
+    setIsReady(true);
+  }, []);
+
+  // Register native animation
+  useEffect(() => {
+    if (!enabled) return;
+
+    const container = ref.current;
+    if (!container || !text) return;
+
+    let isMounted = true;
+
+    const nativeOptions: NativeAnimationOptions = {
+      container,
+      text,
+      fontSize,
+      color,
+      fontUrl,
+      strokeWidth,
+      scrollRange,
+      onReady: handleReady,
+      onProgress: handleProgress,
+    };
+
+    registerNativeAnimation(nativeOptions)
+      .then((dispose: () => void) => {
+        if (!isMounted) {
+          dispose();
+          return;
+        }
+        cleanupRef.current = dispose;
+      })
+      .catch((err: unknown) => {
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      cleanupRef.current?.();
+      setIsReady(false);
+    };
+  }, [enabled, ref, text, fontSize, color, fontUrl, strokeWidth, scrollRange, handleProgress, handleReady]);
+
+  const pause = useCallback(() => {
+    setIsPaused(true);
+  }, []);
+
+  const resume = useCallback(() => {
+    setIsPaused(false);
+  }, []);
+
+  return {
+    progress,
+    isReady,
+    error,
+    pause,
+    resume,
+    isPaused,
+  };
+}

@@ -1,5 +1,6 @@
 import { ScrollPlayer } from "./player";
-import type { ScrollAnimationOptions } from "./types";
+import { NativeTextPlayer, registerNativeAnimation } from "./native-player";
+import type { ScrollAnimationOptions, NativeAnimationOptions } from "./types";
 
 export type {
   RenderManifest,
@@ -7,7 +8,10 @@ export type {
   ScrollRange,
   ScrollRangePreset,
   ScrollRangeValue,
+  NativeAnimationOptions,
 } from "./types";
+
+export { NativeTextPlayer, registerNativeAnimation };
 
 export async function registerScrollAnimation(
   options: ScrollAnimationOptions

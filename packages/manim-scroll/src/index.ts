@@ -6,26 +6,37 @@
  *
  * @example
  * ```tsx
- * import { ManimScroll, useManimScroll } from "@mihirsarya/manim-scroll";
+ * import { ManimScroll, useManimScroll, useNativeAnimation } from "@mihirsarya/manim-scroll";
  * import { withManimScroll } from "@mihirsarya/manim-scroll/next";
  * ```
  */
 
 // Runtime exports
-export { registerScrollAnimation } from "@mihirsarya/manim-scroll-runtime";
+export {
+  registerScrollAnimation,
+  registerNativeAnimation,
+  NativeTextPlayer,
+} from "@mihirsarya/manim-scroll-runtime";
 export type {
   RenderManifest,
   ScrollAnimationOptions,
   ScrollRange,
   ScrollRangePreset,
   ScrollRangeValue,
+  NativeAnimationOptions,
 } from "@mihirsarya/manim-scroll-runtime";
 
 // React exports
-export { ManimScroll, useManimScroll } from "@mihirsarya/manim-scroll-react";
+export {
+  ManimScroll,
+  useManimScroll,
+  useNativeAnimation,
+} from "@mihirsarya/manim-scroll-react";
 export type {
   ManimScrollProps,
   ManimAnimationProps,
   UseManimScrollOptions,
   UseManimScrollResult,
+  UseNativeAnimationOptions,
+  UseNativeAnimationResult,
 } from "@mihirsarya/manim-scroll-react";
