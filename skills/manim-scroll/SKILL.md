@@ -1,6 +1,6 @@
 ---
 name: manim-scroll
-description: Build and integrate scroll-driven Manim animations with pre-rendered assets, manifest generation, and the web runtime in this repo. Use when users ask about Manim scroll playback, render pipelines, or integrating the runtime.
+description: Build and integrate scroll-driven Manim animations with pre-rendered assets, manifest generation, and the web runtime. Use when users ask about Manim scroll playback, render pipelines, native text animation, or integrating the runtime.
 globs:
   - "**/*.tsx"
   - "**/*.ts"
@@ -14,7 +14,7 @@ alwaysApply: false
 
 Scroll-driven Manim animations for the web. Pre-render mathematical animations with Manim and play them back smoothly as users scroll.
 
-## Quick start (Next.js)
+## Quick Start (Next.js)
 
 The recommended approach uses the Next.js plugin for automatic build-time rendering.
 
@@ -39,7 +39,7 @@ module.exports = withManimScroll({
 });
 ```
 
-3. Use the component with inline props:
+3. Use the component:
 
 ```tsx
 import { ManimScroll } from "@mihirsarya/manim-scroll";
@@ -61,32 +61,107 @@ export default function Page() {
 
 The plugin automatically extracts props, renders animations, and caches them.
 
-## Package structure
+## Native Mode (No Pre-rendered Assets)
 
-- `packages/manim-scroll/` - Unified package (`@mihirsarya/manim-scroll`)
-- `next/` - Next.js build plugin (`@mihirsarya/manim-scroll-next`)
-- `react/` - React component and hook (`@mihirsarya/manim-scroll-react`)
-- `runtime/` - Core scroll runtime (`@mihirsarya/manim-scroll-runtime`)
-- `render/` - Python CLI for Manim rendering
+For text animations without pre-rendered video/frames, use native mode. This renders text directly in the browser using SVG, replicating Manim's Write/DrawBorderThenFill animation.
 
-## Next.js plugin configuration
+```tsx
+<ManimScroll
+  mode="native"
+  fontSize={48}
+  color="#ffffff"
+  scrollRange="viewport"
+  style={{ height: "100vh", background: "#111" }}
+>
+  Currently building
+</ManimScroll>
+```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `pythonPath` | `"python3"` | Path to Python executable |
-| `quality` | `"h"` | Manim quality preset (l, m, h, k) |
-| `fps` | `30` | Frames per second |
-| `resolution` | `"1920x1080"` | Output resolution |
-| `format` | `"both"` | Output format (frames, video, both) |
-| `concurrency` | CPU count - 1 | Max parallel renders |
-| `verbose` | `false` | Enable verbose logging |
-| `cleanOrphans` | `true` | Remove unused cached assets |
+### Native Mode Benefits
 
-## Scroll range configuration
+- **No build step required** - works immediately without Python/Manim
+- **Perfect sizing** - text renders at exact pixel size (no scaling artifacts)
+- **Smaller bundle** - no video/frame assets to download
+- **Authentic Manim animation** - replicates Write/DrawBorderThenFill exactly:
+  - Uses Manim's exact `lag_ratio = min(4.0 / length, 0.2)` formula
+  - Two-phase animation: stroke drawing (0-50%) and fill transition (50-100%)
+  - Progressive contour drawing across all characters
+  - Matches Manim's `linear` rate function for Write animation
+- **Scroll-driven** - same scroll progress behavior as pre-rendered mode
+
+### Custom Fonts in Native Mode
+
+For authentic Manim typography, provide a font URL (woff, woff2, ttf, otf):
+
+```tsx
+<ManimScroll
+  mode="native"
+  fontSize={48}
+  color="#ffffff"
+  fontUrl="/fonts/CMUSerif-Roman.woff2"
+>
+  Mathematical text
+</ManimScroll>
+```
+
+### useNativeAnimation Hook
+
+For programmatic control:
+
+```tsx
+import { useRef } from "react";
+import { useNativeAnimation } from "@mihirsarya/manim-scroll";
+
+function NativeDemo() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const { progress, isReady, pause, resume } = useNativeAnimation({
+    ref: containerRef,
+    text: "Hello World",
+    fontSize: 72,
+    color: "#ffffff",
+    scrollRange: "viewport",
+  });
+
+  return (
+    <div ref={containerRef} style={{ height: "100vh" }}>
+      {!isReady && <div>Loading...</div>}
+    </div>
+  );
+}
+```
+
+## Inline Mode
+
+For animations that flow with surrounding text (like within a paragraph):
+
+```tsx
+<p>
+  I'm building{" "}
+  <ManimScroll
+    scene="TextScene"
+    fontSize={24}
+    color="#667eea"
+    inline
+    style={{ width: "150px", height: "30px" }}
+  >
+    the future
+  </ManimScroll>{" "}
+  today.
+</p>
+```
+
+Inline mode:
+- Renders with a **transparent background**
+- Uses `display: inline-block` for flow with text
+- Adjusts the Manim camera to fit text tightly with minimal padding
+- Outputs WebM with alpha channel (for video mode) or transparent PNGs (for frames mode)
+
+## Scroll Range Configuration
 
 Control when the animation plays relative to scroll position.
 
-### Presets (recommended)
+### Presets (Recommended)
 
 ```tsx
 <ManimScroll scrollRange="viewport">...</ManimScroll>  // Default: plays as element crosses viewport
@@ -94,21 +169,27 @@ Control when the animation plays relative to scroll position.
 <ManimScroll scrollRange="full">...</ManimScroll>      // Spans entire document scroll
 ```
 
-### Relative units
+### Relative Units
 
 ```tsx
 <ManimScroll scrollRange={["100vh", "-50%"]}>...</ManimScroll>
 <ManimScroll scrollRange={["80vh", "-100%"]}>...</ManimScroll>
 ```
 
-### Pixel values (legacy)
+Supported units:
+- `vh` - viewport height percentage
+- `%` - element height percentage
+- `px` - pixels
+- Plain numbers - treated as pixels
+
+### Pixel Values (Legacy)
 
 ```tsx
 <ManimScroll scrollRange={{ start: 800, end: -400 }}>...</ManimScroll>
 <ManimScroll scrollRange={[800, -400]}>...</ManimScroll>
 ```
 
-## useManimScroll hook
+## useManimScroll Hook
 
 For advanced use cases requiring custom control:
 
@@ -136,60 +217,21 @@ function CustomAnimation() {
 }
 ```
 
-### Hook options
+### Auto-Resolution Mode
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `ref` | `RefObject<HTMLElement>` | Container element ref (required) |
-| `manifestUrl` | `string` | Explicit manifest URL |
-| `scene` | `string` | Scene name for auto-resolution |
-| `animationProps` | `Record<string, unknown>` | Props for auto-resolution |
-| `mode` | `"auto" \| "frames" \| "video"` | Playback mode |
-| `scrollRange` | `ScrollRangeValue` | Scroll range configuration |
-| `canvasDimensions` | `{ width?, height? }` | Canvas size |
+When using with the Next.js plugin, you can let the hook resolve the manifest automatically:
 
-### Hook return value
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `progress` | `number` | Current scroll progress (0 to 1) |
-| `isReady` | `boolean` | Whether animation is loaded |
-| `error` | `Error \| null` | Loading error, if any |
-| `canvasRef` | `RefObject<HTMLCanvasElement>` | Canvas element ref |
-| `seek` | `(progress: number) => void` | Seek to specific progress |
-| `pause` | `() => void` | Pause scroll-driven updates |
-| `resume` | `() => void` | Resume scroll-driven updates |
-| `isPaused` | `boolean` | Whether updates are paused |
-
-## Manual rendering (non-Next.js)
-
-For custom workflows:
-
-```bash
-python render/cli.py \
-  --scene-file path/to/scene.py \
-  --scene-name MyScene \
-  --output-dir ./dist/scene \
-  --format both \
-  --fps 30 \
-  --resolution 1920x1080 \
-  --quality k
+```tsx
+const { progress, isReady } = useManimScroll({
+  ref: containerRef,
+  scene: "TextScene",
+  animationProps: { text: "Hello", fontSize: 72, color: "#fff" },
+});
 ```
 
-### With props
+## Vanilla JS Usage
 
-```bash
-echo '{"text": "Hello World", "fontSize": 72, "color": "#ffffff"}' > props.json
-
-python render/cli.py \
-  --scene-file render/templates/text_scene.py \
-  --scene-name TextScene \
-  --props props.json \
-  --output-dir ./dist/scene \
-  --format both
-```
-
-## Vanilla JS usage
+### Pre-rendered Animations
 
 ```ts
 import { registerScrollAnimation } from "@mihirsarya/manim-scroll-runtime";
@@ -202,10 +244,93 @@ registerScrollAnimation({
   mode: "auto",
   scrollRange: "viewport",
   onReady: () => console.log("ready"),
+  onProgress: (progress) => console.log(progress),
 });
 ```
 
-## Component props reference
+### Native Text Animations
+
+```ts
+import { registerNativeAnimation } from "@mihirsarya/manim-scroll-runtime";
+
+const container = document.querySelector("#hero") as HTMLElement;
+
+registerNativeAnimation({
+  container,
+  text: "Animate this",
+  fontSize: 72,
+  color: "#ffffff",
+  scrollRange: "viewport",
+  onReady: () => console.log("ready"),
+});
+```
+
+## Manual Rendering (Non-Next.js)
+
+For custom workflows, use the Python CLI directly:
+
+```bash
+python render/cli.py \
+  --scene-file path/to/scene.py \
+  --scene-name MyScene \
+  --output-dir ./dist/scene \
+  --format both \
+  --fps 30 \
+  --resolution 1920x1080 \
+  --quality k
+```
+
+### Render Text with Props
+
+```bash
+echo '{"text": "Hello World", "fontSize": 72, "color": "#ffffff"}' > props.json
+
+python render/cli.py \
+  --scene-file render/templates/text_scene.py \
+  --scene-name TextScene \
+  --props props.json \
+  --output-dir ./dist/scene \
+  --format both
+```
+
+### CLI Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--scene-file` | (required) | Path to the Manim scene file |
+| `--scene-name` | (required) | Scene class name to render |
+| `--output-dir` | (required) | Directory for render outputs |
+| `--format` | `both` | Output format: `frames`, `video`, or `both` |
+| `--fps` | `30` | Frames per second |
+| `--resolution` | `1920x1080` | Resolution as WxH |
+| `--quality` | `k` | Manim quality: `l`, `m`, `h`, `k` |
+| `--props` | - | Path to JSON props file |
+| `--transparent` | `false` | Render with transparent background |
+
+## Package Structure
+
+| Package | npm | Description |
+|---------|-----|-------------|
+| `packages/manim-scroll/` | `@mihirsarya/manim-scroll` | Unified package (recommended) |
+| `react/` | `@mihirsarya/manim-scroll-react` | React component and hooks |
+| `next/` | `@mihirsarya/manim-scroll-next` | Next.js build plugin |
+| `runtime/` | `@mihirsarya/manim-scroll-runtime` | Core scroll runtime |
+| `render/` | - | Python CLI for Manim rendering |
+
+## Next.js Plugin Configuration
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `pythonPath` | `"python3"` | Path to Python executable |
+| `quality` | `"h"` | Manim quality preset (l, m, h, k) |
+| `fps` | `30` | Frames per second |
+| `resolution` | `"1920x1080"` | Output resolution |
+| `format` | `"both"` | Output format (frames, video, both) |
+| `concurrency` | CPU count - 1 | Max parallel renders |
+| `verbose` | `false` | Enable verbose logging |
+| `cleanOrphans` | `true` | Remove unused cached assets |
+
+## Component Props Reference
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -213,8 +338,12 @@ registerScrollAnimation({
 | `fontSize` | `number` | Font size for text animations |
 | `color` | `string` | Color as hex string (e.g., `"#ffffff"`) |
 | `font` | `string` | Font family for text |
+| `inline` | `boolean` | Enable inline mode with transparent background |
+| `padding` | `number` | Padding around text in inline mode (Manim units, default: `0.2`) |
 | `manifestUrl` | `string` | Explicit manifest URL (overrides auto-resolution) |
-| `mode` | `"auto" \| "video" \| "frames"` | Playback mode |
+| `mode` | `"auto" \| "video" \| "frames" \| "native"` | Playback mode |
+| `fontUrl` | `string` | URL to font file for native mode |
+| `strokeWidth` | `number` | Stroke width for native mode (default: `2`) |
 | `scrollRange` | `ScrollRangeValue` | Scroll range: preset, tuple, or object |
 | `onReady` | `() => void` | Called when animation is loaded |
 | `onProgress` | `(progress: number) => void` | Called on scroll progress |
@@ -222,7 +351,15 @@ registerScrollAnimation({
 | `style` | `CSSProperties` | Inline styles for the container |
 | `children` | `ReactNode` | Text content (becomes `text` prop) |
 
-## Additional resources
+## Requirements
 
-- Usage docs: [docs/USAGE.md](../../docs/USAGE.md)
-- Example page: [examples/index.html](../../examples/index.html)
+- Python 3.8+ with [Manim](https://www.manim.community/) installed (for pre-rendered mode)
+- Node.js 18+
+- Next.js 13+ (for the plugin)
+
+## Additional Resources
+
+- See `references/ARCHITECTURE.md` for package internals and diagrams
+- See `references/API.md` for complete type definitions
+- See `references/CUSTOM_SCENES.md` for creating custom Manim scenes
+- See `references/TROUBLESHOOTING.md` for common issues and solutions
