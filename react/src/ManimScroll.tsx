@@ -38,7 +38,7 @@ export type ManimScrollProps = ManimAnimationProps & {
    * - "native": Uses native SVG animation (no pre-rendered assets)
    */
   mode?: "auto" | "frames" | "video" | "native";
-  /** Scroll range configuration (preset, tuple, or legacy object) */
+  /** Scroll range configuration (preset, tuple, or legacy object). Ignored when progress is provided. */
   scrollRange?: ScrollRangeValue;
   /** Called when animation is loaded and ready */
   onReady?: () => void;
@@ -53,6 +53,12 @@ export type ManimScrollProps = ManimAnimationProps & {
   fontUrl?: string;
   /** Stroke width for native mode drawing phase */
   strokeWidth?: number;
+  /**
+   * Explicit progress value (0 to 1). When provided, disables scroll-based control
+   * and renders the animation at this exact progress (controlled mode).
+   * Works with native mode. For advanced control, use useNativeAnimation hook.
+   */
+  progress?: number;
   className?: string;
   style?: React.CSSProperties;
   children?: React.ReactNode;
@@ -95,6 +101,7 @@ export function ManimScroll({
   onProgress,
   fontUrl,
   strokeWidth,
+  progress: controlledProgress,
   // Animation props
   scene = "TextScene",
   fontSize,
@@ -145,6 +152,7 @@ export function ManimScroll({
     fontUrl,
     strokeWidth,
     scrollRange,
+    progress: controlledProgress, // Pass progress for controlled mode
     enabled: isNativeMode,
   });
 

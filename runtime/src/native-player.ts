@@ -1,5 +1,5 @@
 import opentype from "opentype.js";
-import type { NativeAnimationOptions, ScrollRangeValue, ScrollRange } from "./types";
+import type { NativeAnimationOptions, ScrollRangeValue, ScrollRange, EasingFunction, EasingPreset, PlaybackOptions } from "./types";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -74,6 +74,41 @@ function integerInterpolate(start: number, end: number, alpha: number): [number,
   const index = Math.floor(scaledAlpha);
   const subalpha = scaledAlpha - index;
   return [start + index, subalpha];
+}
+
+// ============================================================================
+// Easing Functions for Playback
+// ============================================================================
+
+/** Standard ease-in (quadratic) */
+function easeIn(t: number): number {
+  return t * t;
+}
+
+/** Standard ease-out (quadratic) */
+function easeOut(t: number): number {
+  return 1 - (1 - t) * (1 - t);
+}
+
+/** Standard ease-in-out (quadratic) */
+function easeInOut(t: number): number {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+
+/** Resolve an easing preset to an easing function */
+function resolveEasing(easing: EasingPreset | EasingFunction | undefined): EasingFunction {
+  if (typeof easing === "function") {
+    return easing;
+  }
+  switch (easing) {
+    case "ease-in": return easeIn;
+    case "ease-out": return easeOut;
+    case "ease-in-out": return easeInOut;
+    case "smooth": return smooth;
+    case "linear":
+    default:
+      return linear;
+  }
 }
 
 /**
@@ -589,6 +624,28 @@ export class NativeTextPlayer {
   private font: opentype.Font | null = null;
   /** Last known font size, used to detect changes for inherited sizing */
   private lastComputedFontSize = 0;
+  
+  // ==================== Playback State ====================
+  /** Whether time-based animation is currently playing */
+  private _isPlaying = false;
+  /** RAF ID for playback animation loop */
+  private playbackRafId: number | null = null;
+  /** Start time of the current playback (from performance.now()) */
+  private playbackStartTime = 0;
+  /** Duration of current playback in milliseconds */
+  private playbackDuration = 0;
+  /** Easing function for current playback */
+  private playbackEasing: EasingFunction = linear;
+  /** Direction of playback: 1 for forward, -1 for reverse */
+  private playbackDirection: 1 | -1 = 1;
+  /** Whether to loop the playback */
+  private playbackLoop = false;
+  /** Callback when playback completes */
+  private playbackOnComplete?: () => void;
+  /** Current progress value (0 to 1) - used in controlled mode */
+  private currentProgress = 0;
+  /** Whether we're in controlled/programmatic mode (no scroll binding) */
+  private isControlledMode = false;
 
   constructor(options: NativeAnimationOptions) {
     // Manim defaults: DrawBorderThenFill stroke_width = 2
@@ -599,6 +656,9 @@ export class NativeTextPlayer {
       ...options,
     };
     this.container = options.container;
+    // If progress is provided, we're in controlled mode
+    this.isControlledMode = options.progress !== undefined;
+    this.currentProgress = options.progress ?? 0;
   }
 
   async init(): Promise<void> {
@@ -630,17 +690,162 @@ export class NativeTextPlayer {
       this.container.appendChild(this.svg);
     }
 
-    // Setup intersection observer
-    this.setupObserver();
+    // Only setup scroll-based animation if not in controlled mode
+    if (!this.isControlledMode) {
+      // Setup intersection observer
+      this.setupObserver();
+      // Setup resize handling for responsiveness
+      this.setupResizeHandling();
+    }
 
-    // Setup resize handling for responsiveness
-    this.setupResizeHandling();
-
-    // Draw initial state (progress = 0)
-    this.render(0);
+    // Draw initial state
+    this.render(this.currentProgress);
 
     this.options.onReady?.();
   }
+
+  // ==================== Public Playback API ====================
+
+  /**
+   * Whether the animation is currently playing (time-based).
+   */
+  get isPlaying(): boolean {
+    return this._isPlaying;
+  }
+
+  /**
+   * Get the current progress value (0 to 1).
+   */
+  get progress(): number {
+    return this.currentProgress;
+  }
+
+  /**
+   * Set the animation progress directly (0 to 1).
+   * This is the primary method for controlled/declarative usage.
+   * Stops any ongoing playback.
+   */
+  setProgress(progress: number): void {
+    this.pausePlayback();
+    this.currentProgress = clamp(progress, 0, 1);
+    this.render(this.currentProgress);
+    this.options.onProgress?.(this.currentProgress);
+  }
+
+  /**
+   * Play the animation over a specified duration.
+   * @param options - Playback options (duration, easing, loop, etc.)
+   *                  or just duration in milliseconds
+   */
+  play(options?: PlaybackOptions | number): void {
+    this.pausePlayback();
+    
+    // Parse options
+    const opts: PlaybackOptions = typeof options === "number" 
+      ? { duration: options } 
+      : (options ?? {});
+    
+    const duration = opts.duration ?? 1000;
+    const delay = opts.delay ?? 0;
+    
+    this.playbackDuration = duration;
+    this.playbackEasing = resolveEasing(opts.easing);
+    this.playbackDirection = opts.direction ?? 1;
+    this.playbackLoop = opts.loop ?? false;
+    this.playbackOnComplete = opts.onComplete;
+    
+    // Set initial progress based on direction
+    if (this.playbackDirection === 1 && this.currentProgress >= 1) {
+      this.currentProgress = 0;
+    } else if (this.playbackDirection === -1 && this.currentProgress <= 0) {
+      this.currentProgress = 1;
+    }
+    
+    // Start playback with optional delay
+    if (delay > 0) {
+      setTimeout(() => this.startPlayback(), delay);
+    } else {
+      this.startPlayback();
+    }
+  }
+
+  /**
+   * Pause the animation playback.
+   */
+  pause(): void {
+    this.pausePlayback();
+  }
+
+  /**
+   * Seek to a specific progress value (0 to 1).
+   * Unlike setProgress, this doesn't affect the playing state.
+   * If playing, the animation will continue from the new position.
+   */
+  seek(progress: number): void {
+    this.currentProgress = clamp(progress, 0, 1);
+    this.render(this.currentProgress);
+    this.options.onProgress?.(this.currentProgress);
+    
+    // If playing, reset the start time to continue from current position
+    if (this._isPlaying) {
+      const rawProgress = this.playbackDirection === 1 
+        ? this.currentProgress 
+        : 1 - this.currentProgress;
+      // Invert the easing to find approximate time offset
+      // For simplicity, use linear approximation
+      this.playbackStartTime = performance.now() - (rawProgress * this.playbackDuration);
+    }
+  }
+
+  // ==================== Private Playback Helpers ====================
+
+  private startPlayback(): void {
+    this._isPlaying = true;
+    this.playbackStartTime = performance.now();
+    this.playbackTick();
+  }
+
+  private pausePlayback(): void {
+    this._isPlaying = false;
+    if (this.playbackRafId !== null) {
+      cancelAnimationFrame(this.playbackRafId);
+      this.playbackRafId = null;
+    }
+  }
+
+  private playbackTick = (): void => {
+    if (!this._isPlaying) return;
+
+    const elapsed = performance.now() - this.playbackStartTime;
+    let rawProgress = elapsed / this.playbackDuration;
+    
+    if (rawProgress >= 1) {
+      if (this.playbackLoop) {
+        // Loop: reset and continue
+        this.playbackStartTime = performance.now();
+        rawProgress = 0;
+      } else {
+        // Complete
+        rawProgress = 1;
+        this._isPlaying = false;
+      }
+    }
+    
+    // Apply easing and direction
+    const easedProgress = this.playbackEasing(rawProgress);
+    this.currentProgress = this.playbackDirection === 1 
+      ? easedProgress 
+      : 1 - easedProgress;
+    
+    this.render(this.currentProgress);
+    this.options.onProgress?.(this.currentProgress);
+    
+    if (this._isPlaying) {
+      this.playbackRafId = requestAnimationFrame(this.playbackTick);
+    } else {
+      this.playbackOnComplete?.();
+    }
+  };
 
   private async createCharacterPaths(): Promise<void> {
     if (!this.svg) return;
@@ -966,6 +1171,7 @@ export class NativeTextPlayer {
 
   destroy(): void {
     this.stop();
+    this.pausePlayback(); // Clean up playback animation
     this.observer?.disconnect();
     this.resizeObserver?.disconnect();
     if (this.resizeHandler) {

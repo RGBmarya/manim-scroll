@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { registerScrollAnimation, registerNativeAnimation } from "@mihirsarya/manim-scroll-runtime";
+import { registerScrollAnimation, NativeTextPlayer } from "@mihirsarya/manim-scroll-runtime";
 import type { ScrollRangeValue, NativeAnimationOptions } from "@mihirsarya/manim-scroll-runtime";
 import { computePropsHash } from "./hash";
 
@@ -348,28 +348,62 @@ export interface UseNativeAnimationOptions {
   fontUrl?: string;
   /** Stroke width for the drawing phase */
   strokeWidth?: number;
-  /** Scroll range configuration */
+  /** Scroll range configuration. Ignored when progress is provided. */
   scrollRange?: ScrollRangeValue;
+  /** 
+   * Explicit progress value (0 to 1). When provided, disables scroll-based control
+   * and renders the animation at this exact progress (controlled mode).
+   */
+  progress?: number;
   /** Whether the hook is enabled (default: true) */
   enabled?: boolean;
+}
+
+/**
+ * Playback options for the play() method.
+ */
+export interface NativePlaybackOptions {
+  /** Animation duration in milliseconds */
+  duration?: number;
+  /** Delay before starting in milliseconds */
+  delay?: number;
+  /** Easing preset or custom function */
+  easing?: "linear" | "ease-in" | "ease-out" | "ease-in-out" | "smooth" | ((t: number) => number);
+  /** Whether to loop the animation */
+  loop?: boolean;
+  /** Play direction: 1 for forward, -1 for reverse */
+  direction?: 1 | -1;
+  /** Callback when playback completes */
+  onComplete?: () => void;
 }
 
 /**
  * Result returned by the useNativeAnimation hook.
  */
 export interface UseNativeAnimationResult {
-  /** Current scroll progress (0 to 1) */
+  /** Current animation progress (0 to 1) */
   progress: number;
   /** Whether the animation is loaded and ready */
   isReady: boolean;
   /** Error if initialization failed */
   error: Error | null;
-  /** Pause scroll-driven updates */
+  /** Pause scroll-driven updates (legacy, use pause() for playback) */
   pause: () => void;
-  /** Resume scroll-driven updates */
+  /** Resume scroll-driven updates (legacy) */
   resume: () => void;
   /** Whether scroll updates are paused */
   isPaused: boolean;
+  /** 
+   * Play animation over a duration.
+   * @param options - Duration in ms, or PlaybackOptions object
+   */
+  play: (options?: NativePlaybackOptions | number) => void;
+  /** Seek to specific progress (0-1). Doesn't affect playing state. */
+  seek: (progress: number) => void;
+  /** Set progress and stop any playback. For controlled mode. */
+  setProgress: (progress: number) => void;
+  /** Whether time-based animation is currently playing */
+  isPlaying: boolean;
 }
 
 /**
@@ -379,23 +413,34 @@ export interface UseNativeAnimationResult {
  * This hook bypasses the manifest resolution and pre-rendered assets,
  * instead animating text natively using opentype.js and SVG.
  *
+ * Supports three usage modes:
+ * 1. Scroll-driven (default): Animation driven by scroll position
+ * 2. Controlled: Pass progress prop for React-style controlled components
+ * 3. Imperative: Use play(), seek(), setProgress() for programmatic control
+ *
  * @example
  * ```tsx
- * function NativeTextAnimation() {
- *   const containerRef = useRef<HTMLDivElement>(null);
- *   const { progress, isReady } = useNativeAnimation({
- *     ref: containerRef,
- *     text: "Hello World",
- *     fontSize: 48,
- *     color: "#ffffff",
- *   });
+ * // Scroll-driven mode (default)
+ * const { progress, isReady } = useNativeAnimation({
+ *   ref: containerRef,
+ *   text: "Hello World",
+ *   fontSize: 48,
+ * });
  *
- *   return (
- *     <div ref={containerRef} style={{ height: "100vh" }}>
- *       {!isReady && <div>Loading...</div>}
- *     </div>
- *   );
- * }
+ * // Controlled mode
+ * const [progress, setProgress] = useState(0);
+ * useNativeAnimation({
+ *   ref: containerRef,
+ *   text: "Hello World",
+ *   progress, // Animation renders at this exact progress
+ * });
+ *
+ * // Imperative mode
+ * const { play, isReady } = useNativeAnimation({
+ *   ref: containerRef,
+ *   text: "Hello World",
+ * });
+ * useEffect(() => { if (isReady) play(2000); }, [isReady]); // Play over 2s
  * ```
  */
 export function useNativeAnimation(
@@ -409,15 +454,17 @@ export function useNativeAnimation(
     fontUrl,
     strokeWidth = 2, // Manim's DrawBorderThenFill default
     scrollRange,
+    progress: controlledProgress,
     enabled = true,
   } = options;
 
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgressState] = useState(controlledProgress ?? 0);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  const cleanupRef = useRef<(() => void) | null>(null);
+  const playerRef = useRef<NativeTextPlayer | null>(null);
   const pausedRef = useRef(isPaused);
 
   // Keep pausedRef in sync
@@ -425,10 +472,10 @@ export function useNativeAnimation(
     pausedRef.current = isPaused;
   }, [isPaused]);
 
-  // Handle progress updates (respects pause state)
+  // Handle progress updates (respects pause state for scroll-driven mode)
   const handleProgress = useCallback((p: number) => {
     if (!pausedRef.current) {
-      setProgress(p);
+      setProgressState(p);
     }
   }, []);
 
@@ -446,7 +493,7 @@ export function useNativeAnimation(
 
     let isMounted = true;
 
-    const nativeOptions: NativeAnimationOptions = {
+    const player = new NativeTextPlayer({
       container,
       text,
       fontSize,
@@ -454,17 +501,18 @@ export function useNativeAnimation(
       fontUrl,
       strokeWidth,
       scrollRange,
+      progress: controlledProgress,
       onReady: handleReady,
       onProgress: handleProgress,
-    };
+    });
 
-    registerNativeAnimation(nativeOptions)
-      .then((dispose: () => void) => {
+    player.init()
+      .then(() => {
         if (!isMounted) {
-          dispose();
+          player.destroy();
           return;
         }
-        cleanupRef.current = dispose;
+        playerRef.current = player;
       })
       .catch((err: unknown) => {
         if (isMounted) {
@@ -474,17 +522,61 @@ export function useNativeAnimation(
 
     return () => {
       isMounted = false;
-      cleanupRef.current?.();
+      player.destroy();
+      playerRef.current = null;
       setIsReady(false);
     };
-  }, [enabled, ref, text, fontSize, color, fontUrl, strokeWidth, scrollRange, handleProgress, handleReady]);
+  }, [enabled, ref, text, fontSize, color, fontUrl, strokeWidth, scrollRange, controlledProgress, handleProgress, handleReady]);
 
+  // Update progress when controlled prop changes
+  useEffect(() => {
+    if (controlledProgress !== undefined && playerRef.current) {
+      playerRef.current.setProgress(controlledProgress);
+      setProgressState(controlledProgress);
+    }
+  }, [controlledProgress]);
+
+  // Legacy pause/resume for scroll-driven mode
   const pause = useCallback(() => {
     setIsPaused(true);
   }, []);
 
   const resume = useCallback(() => {
     setIsPaused(false);
+  }, []);
+
+  // Playback controls
+  const play = useCallback((playOptions?: NativePlaybackOptions | number) => {
+    const player = playerRef.current;
+    if (!player) return;
+    
+    setIsPlaying(true);
+    
+    if (typeof playOptions === "number") {
+      player.play({ 
+        duration: playOptions,
+        onComplete: () => setIsPlaying(false),
+      });
+    } else {
+      player.play({
+        ...playOptions,
+        onComplete: () => {
+          playOptions?.onComplete?.();
+          setIsPlaying(false);
+        },
+      });
+    }
+  }, []);
+
+  const seek = useCallback((targetProgress: number) => {
+    playerRef.current?.seek(targetProgress);
+    setProgressState(targetProgress);
+  }, []);
+
+  const setProgress = useCallback((targetProgress: number) => {
+    playerRef.current?.setProgress(targetProgress);
+    setProgressState(targetProgress);
+    setIsPlaying(false);
   }, []);
 
   return {
@@ -494,5 +586,9 @@ export function useNativeAnimation(
     pause,
     resume,
     isPaused,
+    play,
+    seek,
+    setProgress,
+    isPlaying,
   };
 }

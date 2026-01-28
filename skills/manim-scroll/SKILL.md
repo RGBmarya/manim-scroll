@@ -104,9 +104,82 @@ For authentic Manim typography, provide a font URL (woff, woff2, ttf, otf):
 </ManimScroll>
 ```
 
+## Progress-Based Animation (No Scroll)
+
+Animate text programmatically via progress value or duration instead of scroll.
+
+### Controlled Progress Mode
+
+Pass `progress` prop (0-1) to render at exact animation state:
+
+```tsx
+const [progress, setProgress] = useState(0);
+
+<ManimScroll mode="native" progress={progress}>
+  Hello World
+</ManimScroll>
+
+<input 
+  type="range" 
+  value={progress} 
+  onChange={(e) => setProgress(+e.target.value)} 
+  min={0} max={1} step={0.01} 
+/>
+```
+
+### Imperative Playback with Hook
+
+Use `useNativeAnimation` for programmatic control:
+
+```tsx
+import { useRef, useEffect } from "react";
+import { useNativeAnimation } from "@mihirsarya/manim-scroll";
+
+function AutoPlayDemo() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const { isReady, play, seek, setProgress, isPlaying } = useNativeAnimation({
+    ref: containerRef,
+    text: "Hello World",
+    fontSize: 72,
+    color: "#ffffff",
+  });
+
+  // Auto-play on mount
+  useEffect(() => {
+    if (isReady) {
+      play(2000); // Play over 2 seconds
+    }
+  }, [isReady, play]);
+
+  return (
+    <div ref={containerRef}>
+      <button onClick={() => play(1000)}>Play</button>
+      <button onClick={() => seek(0.5)}>Jump to 50%</button>
+      <button onClick={() => setProgress(0)}>Reset</button>
+    </div>
+  );
+}
+```
+
+### Playback Options
+
+The `play()` method accepts options for fine-grained control:
+
+```tsx
+play({
+  duration: 2000,           // Animation duration in ms
+  delay: 500,               // Delay before starting
+  easing: "ease-in-out",    // Easing: "linear" | "ease-in" | "ease-out" | "ease-in-out" | "smooth"
+  loop: true,               // Loop animation
+  direction: -1,            // Reverse playback
+  onComplete: () => {},     // Callback when done
+});
+```
+
 ### useNativeAnimation Hook
 
-For programmatic control:
+Full programmatic control:
 
 ```tsx
 import { useRef } from "react";
@@ -115,12 +188,12 @@ import { useNativeAnimation } from "@mihirsarya/manim-scroll";
 function NativeDemo() {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const { progress, isReady, pause, resume } = useNativeAnimation({
+  const { progress, isReady, pause, resume, play, seek, setProgress, isPlaying } = useNativeAnimation({
     ref: containerRef,
     text: "Hello World",
     fontSize: 72,
     color: "#ffffff",
-    scrollRange: "viewport",
+    scrollRange: "viewport", // Ignored when using play()/setProgress()
   });
 
   return (

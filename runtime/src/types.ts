@@ -54,6 +54,28 @@ export type ScrollAnimationOptions = {
  * Options for native text animation (no pre-rendered assets).
  * Replicates Manim's Write/DrawBorderThenFill animation in the browser.
  */
+/** Easing function type: takes a progress value (0 to 1) and returns eased progress */
+export type EasingFunction = (t: number) => number;
+
+/** Pre-built easing presets */
+export type EasingPreset = "linear" | "ease-in" | "ease-out" | "ease-in-out" | "smooth";
+
+/** Options for duration-based animation playback */
+export type PlaybackOptions = {
+  /** Animation duration in milliseconds */
+  duration?: number;
+  /** Delay before starting in milliseconds */
+  delay?: number;
+  /** Easing function or preset */
+  easing?: EasingPreset | EasingFunction;
+  /** Whether to loop the animation */
+  loop?: boolean;
+  /** Play direction: 1 for forward, -1 for reverse */
+  direction?: 1 | -1;
+  /** Callback when playback completes (not called if loop is true) */
+  onComplete?: () => void;
+};
+
 export type NativeAnimationOptions = {
   /** The container element to render the animation into */
   container: HTMLElement;
@@ -67,8 +89,13 @@ export type NativeAnimationOptions = {
   fontUrl?: string;
   /** Stroke width for the drawing phase (default: 2, matches Manim's DrawBorderThenFill) */
   strokeWidth?: number;
-  /** Scroll range configuration */
+  /** Scroll range configuration. Ignored when progress is provided. */
   scrollRange?: ScrollRangeValue;
+  /** 
+   * Explicit progress value (0 to 1). When provided, disables scroll-based control
+   * and renders the animation at this exact progress.
+   */
+  progress?: number;
   /** Called when animation is loaded and ready */
   onReady?: () => void;
   /** Called on scroll progress updates */

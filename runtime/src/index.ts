@@ -9,6 +9,9 @@ export type {
   ScrollRangePreset,
   ScrollRangeValue,
   NativeAnimationOptions,
+  EasingFunction,
+  EasingPreset,
+  PlaybackOptions,
 } from "./types";
 
 export { NativeTextPlayer, registerNativeAnimation };
